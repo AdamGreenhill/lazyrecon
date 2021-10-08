@@ -3,15 +3,15 @@
 
 ########################################
 # ///                                        \\\
-#  		You can edit your configuration here
+#     You can edit your configuration here
 #
 #
 ########################################
 auquatoneThreads=5
 subdomainThreads=10
 dirsearchThreads=50
-dirsearchWordlist=~/tools/dirsearch/db/dicc.txt
-massdnsWordlist=~/tools/SecLists/Discovery/DNS/clean-jhaddix-dns.txt
+dirsearchWordlist=/opt/tools/dirsearch/db/dicc.txt
+massdnsWordlist=/opt/tools/SecLists/Discovery/DNS/clean-jhaddix-dns.txt
 chromiumPath=/snap/bin/chromium
 outfile=/output/
 ########################################
@@ -43,12 +43,12 @@ while getopts ":d:e:r:" o; do
             #### working on subdomain exclusion
         e)
             set -f
-	    IFS=","
-	    excluded+=($OPTARG)
-	    unset IFS
+      IFS=","
+      excluded+=($OPTARG)
+      unset IFS
             ;;
 
-		r)
+    r)
             subreport+=("$OPTARG")
             ;;
         *)
@@ -63,12 +63,12 @@ if [ -z "${domain}" ] && [[ -z ${subreport[@]} ]]; then
 fi
 
 discovery(){
-	hostalive $domain
-	cleandirsearch $domain
-	aqua $domain
-	cleanup $domain
-	waybackrecon $domain
-	dirsearcher
+  hostalive $domain
+  cleandirsearch $domain
+  aqua $domain
+  cleanup $domain
+  waybackrecon $domain
+  dirsearcher
 }
 
 waybackrecon () {
@@ -112,7 +112,7 @@ recon(){
 
   echo "${green}Recon started on $domain ${reset}"
   echo "Listing subdomains using sublister..."
-  python ~/tools/Sublist3r/sublist3r.py -d $domain -t 10 -v -o $outfile/$domain/$foldername/$domain.txt > /dev/null
+  python /opt/tools/Sublist3r/sublist3r.py -d $domain -t 10 -v -o $outfile/$domain/$foldername/$domain.txt > /dev/null
   echo "Checking certspotter..."
   curl -s https://certspotter.com/api/v0/certs\?domain\=$domain | jq '.[].dns_names[]' | sed 's/\"//g' | sed 's/\*\.//g' | sort -u | grep $domain >> $outfile/$domain/$foldername/$domain.txt
   nsrecords $domain
@@ -141,7 +141,7 @@ excludedomains(){
 dirsearcher(){
 
 echo "Starting dirsearch..."
-cat $outfile/$domain/$foldername/urllist.txt | xargs -P$subdomainThreads -I % sh -c "python3 ~/tools/dirsearch/dirsearch.py -e php,asp,aspx,jsp,html,zip,jar -w $dirsearchWordlist -t $dirsearchThreads -u % | grep Target && tput sgr0 && ./lazyrecon.sh -r $domain -r $foldername -r %"
+cat $outfile/$domain/$foldername/urllist.txt | xargs -P$subdomainThreads -I % sh -c "python3 /opt/tools/dirsearch/dirsearch.py -e php,asp,aspx,jsp,html,zip,jar -w $dirsearchWordlist -t $dirsearchThreads -u % | grep Target && tput sgr0 && ./lazyrecon.sh -r $domain -r $foldername -r %"
 }
 
 aqua(){
@@ -150,13 +150,13 @@ cat $outfile/$domain/$foldername/urllist.txt | aquatone -chrome-path $chromiumPa
 }
 
 searchcrtsh(){
- ~/tools/massdns/scripts/ct.py $domain 2>/dev/null > $outfile/$domain/$foldername/tmp.txt
- [ -s $outfile/$domain/$foldername/tmp.txt ] && cat $outfile/$domain/$foldername/tmp.txt | ~/tools/massdns/bin/massdns -r ~/tools/massdns/lists/resolvers.txt -t A -q -o S -w  $outfile/$domain/$foldername/crtsh.txt
- cat $outfile/$domain/$foldername/$domain.txt | ~/tools/massdns/bin/massdns -r ~/tools/massdns/lists/resolvers.txt -t A -q -o S -w  $outfile/$domain/$foldername/domaintemp.txt
+ /opt/tools/massdns/scripts/ct.py $domain 2>/dev/null > $outfile/$domain/$foldername/tmp.txt
+ [ -s $outfile/$domain/$foldername/tmp.txt ] && cat $outfile/$domain/$foldername/tmp.txt | /opt/tools/massdns/bin/massdns -r /opt/tools/massdns/lists/resolvers.txt -t A -q -o S -w  $outfile/$domain/$foldername/crtsh.txt
+ cat $outfile/$domain/$foldername/$domain.txt | /opt/tools/massdns/bin/massdns -r /opt/tools/massdns/lists/resolvers.txt -t A -q -o S -w  $outfile/$domain/$foldername/domaintemp.txt
 }
 
 mass(){
- ~/tools/massdns/scripts/subbrute.py $massdnsWordlist $domain | ~/tools/massdns/bin/massdns -r ~/tools/massdns/lists/resolvers.txt -t A -q -o S | grep -v 142.54.173.92 > $outfile/$domain/$foldername/mass.txt
+ /opt/tools/massdns/scripts/subbrute.py $massdnsWordlist $domain | /opt/tools/massdns/bin/massdns -r /opt/tools/massdns/lists/resolvers.txt -t A -q -o S | grep -v 142.54.173.92 > $outfile/$domain/$foldername/mass.txt
 }
 nsrecords(){
                 echo "Checking http://crt.sh"
@@ -203,10 +203,10 @@ nsrecords(){
 
 report(){
   subdomain=$(echo $subd | sed 's/\http\:\/\///g' |  sed 's/\https\:\/\///g')
-  echo "${yellow}	[+] Generating report for $subdomain"
+  echo "${yellow} [+] Generating report for $subdomain"
 
    cat $outfile/$domain/$foldername/aqua_out/aquatone_session.json | jq --arg v "$subd" -r '.pages[$v].headers[] | keys[] as $k | "\($k), \(.[$k])"' | grep -v "decreasesSecurity\|increasesSecurity" >> $outfile/$domain/$foldername/aqua_out/parsedjson/$subdomain.headers
-  dirsearchfile=$(ls ~/tools/dirsearch/reports/$subdomain/ | grep -v old)
+  dirsearchfile=$(ls /opt/tools/dirsearch/reports/$subdomain/ | grep -v old)
 
   touch $outfile/$domain/$foldername/reports/$subdomain.html
   echo '<html><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -229,7 +229,7 @@ echo '<script>$(document).ready( function () {
         "paging":   true,
         "ordering": true,
         "info":     true,
-	     "autoWidth": true,
+       "autoWidth": true,
             "columns": [{ "width": "5%" },{ "width": "5%" },null],
                 "lengthMenu": [[10, 25, 50,100, -1], [10, 25, 50,100, "All"]],
 
@@ -261,7 +261,7 @@ echo '<div class="container single-post-container">
  <th>Url</th>
  </tr></thead><tbody>" >> $outfile/$domain/$foldername/reports/$subdomain.html
 
-   cat ~/tools/dirsearch/reports/$subdomain/$dirsearchfile | while read nline; do
+   cat /opt/tools/dirsearch/reports/$subdomain/$dirsearchfile | while read nline; do
   status_code=$(echo "$nline" | awk '{print $1}')
   size=$(echo "$nline" | awk '{print $2}')
   url=$(echo "$nline" | awk '{print $3}')
@@ -351,7 +351,7 @@ echo '<script>$(document).ready( function () {
         "paging":   true,
         "ordering": true,
         "info":     false,
-	"lengthMenu": [[10, 25, 50,100, -1], [10, 25, 50,100, "All"]],
+  "lengthMenu": [[10, 25, 50,100, -1], [10, 25, 50,100, "All"]],
     });
 } );</script></head>'>> $outfile/$domain/$foldername/master_report.html
 
@@ -385,10 +385,10 @@ echo '<div class="container single-post-container">
 
 
 cat $outfile/$domain/$foldername/urllist.txt |  sed 's/\http\:\/\///g' |  sed 's/\https\:\/\///g'  | while read nline; do
-diresults=$(ls ~/tools/dirsearch/reports/$nline/ | grep -v old)
+diresults=$(ls /opt/tools/dirsearch/reports/$nline/ | grep -v old)
 echo "<tr>
  <td><a href='./reports/$nline.html'>$nline</a></td>
- <td>$(wc -l ~/tools/dirsearch/reports/$nline/$diresults | awk '{print $1}')</td>
+ <td>$(wc -l /opt/tools/dirsearch/reports/$nline/$diresults | awk '{print $1}')</td>
  </tr>" >> $outfile/$domain/$foldername/master_report.html
 done
 echo "</tbody></table>
@@ -440,16 +440,16 @@ logo(){
 ${reset}                                                      "
 }
 cleandirsearch(){
-	cat $outfile/$domain/$foldername/urllist.txt | sed 's/\http\:\/\///g' |  sed 's/\https\:\/\///g' | sort -u | while read line; do
-  [ -d ~/tools/dirsearch/reports/$line/ ] && ls ~/tools/dirsearch/reports/$line/ | grep -v old | while read i; do
-  mv ~/tools/dirsearch/reports/$line/$i ~/tools/dirsearch/reports/$line/$i.old
+  cat $outfile/$domain/$foldername/urllist.txt | sed 's/\http\:\/\///g' |  sed 's/\https\:\/\///g' | sort -u | while read line; do
+  [ -d /opt/tools/dirsearch/reports/$line/ ] && ls /opt/tools/dirsearch/reports/$line/ | grep -v old | while read i; do
+  mv /opt/tools/dirsearch/reports/$line/$i /opt/tools/dirsearch/reports/$line/$i.old
   done
   done
   }
 cleantemp(){
 
     rm $outfile/$domain/$foldername/temp.txt
-  	rm $outfile/$domain/$foldername/tmp.txt
+    rm $outfile/$domain/$foldername/tmp.txt
     rm $outfile/$domain/$foldername/domaintemp.txt
     rm $outfile/$domain/$foldername/cleantemp.txt
 
