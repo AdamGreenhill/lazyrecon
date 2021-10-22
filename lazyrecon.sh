@@ -12,8 +12,7 @@ subdomainThreads=10
 dirsearchThreads=50
 dirsearchWordlist=/opt/tools/dirsearch/db/dicc.txt
 massdnsWordlist=/opt/tools/SecLists/Discovery/DNS/clean-jhaddix-dns.txt
-chromiumPath=/snap/bin/chromium
-outfile=/output/
+outfile=/output
 ########################################
 # Happy Hunting
 ########################################
@@ -75,19 +74,19 @@ waybackrecon () {
 echo "Scraping wayback for data..."
 cat $outfile/$domain/$foldername/urllist.txt | waybackurls > $outfile/$domain/$foldername/wayback-data/waybackurls.txt
 cat $outfile/$domain/$foldername/wayback-data/waybackurls.txt  | sort -u | unfurl --unique keys > $outfile/$domain/$foldername/wayback-data/paramlist.txt
-[ -s $outfile/$domain/$foldername/wayback-data/paramlist.txt ] && echo "Wordlist saved to /$domain/$foldername/wayback-data/paramlist.txt"
+[ -s $outfile/$domain/$foldername/wayback-data/paramlist.txt ] && echo "Wordlist saved to $outfile/$domain/$foldername/wayback-data/paramlist.txt"
 
 cat $outfile/$domain/$foldername/wayback-data/waybackurls.txt  | sort -u | grep -P "\w+\.js(\?|$)" | sort -u > $outfile/$domain/$foldername/wayback-data/jsurls.txt
-[ -s $outfile/$domain/$foldername/wayback-data/jsurls.txt ] && echo "JS Urls saved to /$domain/$foldername/wayback-data/jsurls.txt"
+[ -s $outfile/$domain/$foldername/wayback-data/jsurls.txt ] && echo "JS Urls saved to $outfile/$domain/$foldername/wayback-data/jsurls.txt"
 
 cat $outfile/$domain/$foldername/wayback-data/waybackurls.txt  | sort -u | grep -P "\w+\.php(\?|$) | sort -u " > $outfile/$domain/$foldername/wayback-data/phpurls.txt
-[ -s $outfile/$domain/$foldername/wayback-data/phpurls.txt ] && echo "PHP Urls saved to /$domain/$foldername/wayback-data/phpurls.txt"
+[ -s $outfile/$domain/$foldername/wayback-data/phpurls.txt ] && echo "PHP Urls saved to $outfile/$domain/$foldername/wayback-data/phpurls.txt"
 
 cat $outfile/$domain/$foldername/wayback-data/waybackurls.txt  | sort -u | grep -P "\w+\.aspx(\?|$) | sort -u " > $outfile/$domain/$foldername/wayback-data/aspxurls.txt
-[ -s $outfile/$domain/$foldername/wayback-data/aspxurls.txt ] && echo "ASP Urls saved to /$domain/$foldername/wayback-data/aspxurls.txt"
+[ -s $outfile/$domain/$foldername/wayback-data/aspxurls.txt ] && echo "ASP Urls saved to $outfile/$domain/$foldername/wayback-data/aspxurls.txt"
 
 cat $outfile/$domain/$foldername/wayback-data/waybackurls.txt  | sort -u | grep -P "\w+\.jsp(\?|$) | sort -u " > $outfile/$domain/$foldername/wayback-data/jspurls.txt
-[ -s $outfile/$domain/$foldername/wayback-data/jspurls.txt ] && echo "JSP Urls saved to /$domain/$foldername/wayback-data/jspurls.txt"
+[ -s $outfile/$domain/$foldername/wayback-data/jspurls.txt ] && echo "JSP Urls saved to $outfile/$domain/$foldername/wayback-data/jspurls.txt"
 }
 
 cleanup(){
@@ -116,7 +115,7 @@ recon(){
   echo "Checking certspotter..."
   curl -s https://certspotter.com/api/v0/certs\?domain\=$domain | jq '.[].dns_names[]' | sed 's/\"//g' | sed 's/\*\.//g' | sort -u | grep $domain >> $outfile/$domain/$foldername/$domain.txt
   nsrecords $domain
-  excludedomains
+  #excludedomains
   echo "Starting discovery..."
   discovery $domain
   cat $outfile/$domain/$foldername/$domain.txt | sort -u > $outfile/$domain/$foldername/$domain.txt
@@ -141,12 +140,12 @@ excludedomains(){
 dirsearcher(){
 
 echo "Starting dirsearch..."
-cat $outfile/$domain/$foldername/urllist.txt | xargs -P$subdomainThreads -I % sh -c "python3 /opt/tools/dirsearch/dirsearch.py -e php,asp,aspx,jsp,html,zip,jar -w $dirsearchWordlist -t $dirsearchThreads -u % | grep Target && tput sgr0 && ./lazyrecon.sh -r $domain -r $foldername -r %"
+cat $outfile/$domain/$foldername/urllist.txt | xargs -P$subdomainThreads -I % sh -c "python3 /opt/tools/dirsearch/dirsearch.py -e php,asp,aspx,jsp,html,zip,jar -w $dirsearchWordlist -t $dirsearchThreads -u % | grep Target && tput sgr0 && /opt/lazyrecon/lazyrecon.sh -r $domain -r $foldername -r %"
 }
 
 aqua(){
 echo "Starting aquatone scan..."
-cat $outfile/$domain/$foldername/urllist.txt | aquatone -chrome-path $chromiumPath -out $outfile/$domain/$foldername/aqua_out -threads $auquatoneThreads -silent
+cat $outfile/$domain/$foldername/urllist.txt | /opt/tools/aquatone -out $outfile/$domain/$foldername/aqua_out -threads $auquatoneThreads -silent
 }
 
 searchcrtsh(){
@@ -156,7 +155,7 @@ searchcrtsh(){
 }
 
 mass(){
- /opt/tools/massdns/scripts/subbrute.py $massdnsWordlist $domain | /opt/tools/massdns/bin/massdns -r /opt/tools/massdns/lists/resolvers.txt -t A -q -o S | grep -v 142.54.173.92 > $outfile/$domain/$foldername/mass.txt
+ python3 /opt/tools/massdns/scripts/subbrute.py $massdnsWordlist $domain | /opt/tools/massdns/bin/massdns -r /opt/tools/massdns/lists/resolvers.txt -t A -q -o S | grep -v 142.54.173.92 > $outfile/$domain/$foldername/mass.txt
 }
 nsrecords(){
                 echo "Checking http://crt.sh"
@@ -293,13 +292,13 @@ echo '<div class="row">
 <div class="column">
 Port 80' >> $outfile/$domain/$foldername/reports/$subdomain.html
 scpath=$(echo "$subdomain" | sed 's/\./_/g')
-httpsc=$(ls $outfile/$domain/$foldername/aqua_out/screenshots/http__$scpath*  2>/dev/null)
-echo "<a href=\"../../../$httpsc\"><img/src=\"../../../$httpsc\"></a> " >> $outfile/$domain/$foldername/reports/$subdomain.html
+httpsc=$(ls $outfile/$domain/$foldername/aqua_out/screenshots/http__$scpath* 2>/dev/null)
+echo "<a href=\"../aqua_out/screenshots/${httpsc##*/}\"><img/src=\"../aqua_out/screenshots/${httpsc##*/}\"></a> " >> $outfile/$domain/$foldername/reports/$subdomain.html
 echo '</div>
   <div class="column">
 Port 443' >> $outfile/$domain/$foldername/reports/$subdomain.html
-httpssc=$(ls $outfile/$domain/$foldername/aqua_out/screenshots/https__$scpath*  2>/dev/null)
-echo "<a href=\"../../../$httpssc\"><img/src=\"../../../$httpssc\"></a>" >> $outfile/$domain/$foldername/reports/$subdomain.html
+httpssc=$(ls $outfile/$domain/$foldername/aqua_out/screenshots/https__$scpath* 2>/dev/null)
+echo "<a href=\"../aqua_out/screenshots/${httpsc##*/}\"><img/src=\"../aqua_out/screenshots/${httpsc##*/}\"></a>" >> $outfile/$domain/$foldername/reports/$subdomain.html
 echo "</div></div></pre>" >> $outfile/$domain/$foldername/reports/$subdomain.html
 #echo "<h2>Dig Info</h2><pre>$(dig $subdomain)</pre>" >> $outfile/$domain/$foldername/reports/$subdomain.html
 echo "<h2>Host Info</h2><pre>$(host $subdomain)</pre>" >> $outfile/$domain/$foldername/reports/$subdomain.html
@@ -328,6 +327,7 @@ $(nmap -sV -T3 -Pn -p2075,2076,6443,3868,3366,8443,8080,9443,9091,3000,8000,5900
 
 
 }
+
 master_report()
 {
 
@@ -501,5 +501,7 @@ fi
 todate=$(date +"%Y-%m-%d")
 path=$(pwd)
 foldername=recon-$todate
-source ~/.bash_profile
+export GOROOT=/usr/local/go
+export GOPATH=$HOME/go
+export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
 main $domain
